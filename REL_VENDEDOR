@@ -1,0 +1,243 @@
+IDENTIFICATION DIVISION.
+PROGRAM-ID. REL_VENDEDOR.
+AUTHOR KAUE.
+
+ENVIRONMENT DIVISION.
+INPUT-OUTPUT SECTION.
+FILE-CONTROL.
+
+    SELECT ARQ-VENDEDOR ASSIGN TO DISK WID-ARQ-VENDEDOR
+		ORGANIZATION MODE    IS INDEXED
+		ACCESS MODE          IS DYNAMIC
+		RECORD KEY           IS ARQV-COD-VENDEDOR
+		LOCK MODE            IS MANUAL
+		FILE STATUIS         IS WS-RESULTADO-ACESSO
+			 
+DATA DIVISION.
+   FILE SECTION.
+   
+   FD ARQ-VENDEDOR.
+    01 ARQV-REGISTRO.
+       03 ARQV-COD-VENDEDOR   PIC 9(07) VALUE ZEROS.
+	   03 ARQV-CPF-VENDEDOR   PIC 9(14) VALUE ZEROS.
+	   03 ARQV-NM-VENDEDOR    PIC X(40) VALUE SPACES.
+	   03 ARQV-LAT-VENDEDOR   PIC S9(03)V9(08).
+	   03 ARQV-LONG-VENDEDOR  PIC S9(03)V9(08).
+			 
+   WORKING-STORAGE SECTION.
+   
+    01 WS-OPCAO            PIC 9(02) VALUE ZEROS.
+	01 WS-FIM-REL          PIC X(01) VALUE SPACES.
+    01 WS-MENSAGEM         PIC X(80) VALUE SPACES.
+	01 WS-RESULTADO-ACESSO PIC 9(04) VALUE ZEROS.
+	01 WS-COD-VEND-DE      PIC 9(07) VALUE ZEROS.
+	01 WS-COD-VEND-ATE     PIC 9(07) VALUE ZEROS.
+	01 WS-NOME-DE          PIC X(40) VALUE SPACES.
+	01 WS-NOME-ATE         PIC X(40) VALUE SPACES.
+	01 WS-TP-CLASSIFICACAO PIC X(01) VALUE SPACES.
+	01 WS-TP-ORDENACAO     PIC X(01) VALUE SPACES.
+	
+	01 WRK-VENDEDOR.
+       03 WRK-COD-VENDEDOR   PIC 9(07) VALUE ZEROS.
+	   03 WRK-CPF-CLIENTE    PIC 9(11) VALUE ZEROS.
+	   03 WRK-NM-VENDEDOR    PIC X(40) VALUE SPACES.
+	   03 WRK-LAT-VENDEDOR   PIC S9(03)V9(08).
+	   03 WRK-LONG-VENDEDOR  PIC S9(03)V9(08).
+
+   LINKAGE SECTION.
+    01 LNK-STATUS   PIC 9(04).
+	01 LNK-DADOS    PIC X(80).
+	
+PROCEDURE DIVISION.
+   
+    PERFORM 0100-INICIALIZACAO.
+    PERFORM 0150-MONTA-TELA
+    PERFORM 0200-PROCESSAMENTO
+    PERFORM 0300-FINALIZACAO.
+
+0100-INICIALIZACAO      SECTION.
+0100-01.
+
+    MOVE SPACES      TO WS-OPCAO.
+    MOVE SPACES      TO WS-MENSAGEM.
+    MOVE SPACES      TO LNK-DADOS.
+	MOVE ZEROS       TO LNK-STATUS.
+	MOVE SPACES      TO WS-TP-ORDENACAO
+	MOVE SPACES      TO WS-TP-CLASSIFICACAO
+	MOVE LOW-VALUES  TO WS-COD-VEND-DE
+	MOVE LOW-VALUES  TO WS-NOME-DE
+	MOVE HIGH-VALUES TO WS-COD-VEND-ATE
+	MOVE HIGH-VALUES TO WS-NOME-ATE
+	
+	OPEN I-O ARQ-VENDEDOR.
+	IF WS-FILE-STATUS NOT EQUAL ZEROS
+	   MOVE "ERRO AO ABRIR ARQUIVO DE VENDEDORES" TO WS-MENSAGEM
+	   EXIT SECTION
+	END-IF.
+
+0100-EXIT.
+    EXIT.
+
+0150-EXIT.
+    EXIT.
+
+0150-MONTA-TELA         SECTION.
+0150-01.
+
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                   RELATORIO DE VENDEDORES                            |/n".
+	DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|   TIPO DE ORDENACAO                                                  |/n".
+	DISPLAY "|   DIGITE A PARA ASCENDENTE OU D PARA DESCENDENTE: ".
+	ACCEPT  WS-TP-ORDENACAO.
+	DISPLAY "    |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|   TIPO DE CLASSIFICACAO                                              |/n".
+	DISPLAY "|   DIGITE C PARA CODIGO DO VENDEDOR OU N PARA NOME DO VENDEDOR: ".
+	ACCEPT  WS-TP-CLASSIFICACAO.
+	DISPLAY "   |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|   FILTROS                                                            |/n".
+	DISPLAY "|   CODIGO VENDEDOR DE ".
+	ACCEPT  WS-COD-VEND-DE.
+	DISPLAY " ATE ".
+	ACCEPT  WS-COD-VEND-ATE
+	DISPLAY " |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|   NOME VENDEDOR DE ".
+	ACCEPT  WS-NOME-DE.
+	DISPLAY " ATE ".
+	ACCEPT  WS-NOME-ATE.
+	DISPLAY " |/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "|   DIGITE 99 PARA VOLTAR                                              |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|  ".
+    ACCEPT  WS-OPCAO.
+    DISPLAY " OPCAO                                                          	|/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|  ", WS-MENSAGEM, " |/n".
+	DISPLAY "------------------------------------------------------------------------/n".	
+
+0150-EXIT.
+    EXIT.
+
+0151-MONTA-CABECALHO         SECTION.
+0151-01.
+
+    DISPLAY "-------------------------------------------------------------------------------/n".
+	DISPLAY "|                   RELATORIO DE VENDEDORES                                   |/n".
+    DISPLAY "-------------------------------------------------------------------------------/n".
+	DISPLAY "| COD-VENDEDOR | CPF-VENDEDOR | NOME VENDEDOR          | LATITUDE | LONGITUDE |/n".
+	DISPLAY "-------------------------------------------------------------------------------/n".
+	DISPLAY "|                                                                             |/n".	
+	
+0151-EXIT.
+    EXIT.
+
+0152-MONTA-RODAPE         SECTION.
+0152-01.
+
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|  ", WS-MENSAGEM, " |/n".
+	DISPLAY "------------------------------------------------------------------------/n".
+
+0152-EXIT.
+    EXIT.
+
+0153-IMPRIME-LINHA            SECTION.
+0153-01.
+
+	DISPLAY "| ", WRK-COD-VENDEDOR, " | ", WRK-CPF-VENDEDOR, " | ", WRK-NM-VENDEDOR, " | ", WRK-LAT-VENDEDOR, " | ", WRK-LONG-VENDEDOR, " |/n".
+
+0153-EXIT.
+    EXIT.
+
+	
+0200-PROCESSAMENTO      SECTION.
+0200-01.
+    
+	MOVE SPACES          TO WS-MENSAGEM.
+    IF   WS-TP-ORDENACAO EQUAL "A"
+         EVALUATE WS-TP-CLASSIFICACAO 
+		    WHEN "C"
+                 START ARQ-VENDEDOR KEY NOT LESS WS-COD-VEND-DE
+		    WHEN "R"
+			     START ARQ-VENDEDOR KEY NOT LESS WS-NOME-DE
+		    WHEN OTHER
+			     MOVE "TIPO DE CLASSIFICACAO INVALIDO TO WS-MENSAGEM
+				 PERFORM 0152-MONTA-RODAPE
+				 EXIT SECTION
+		END-EVALUATE
+	ELSE
+	    IF  WS-TP-ORDENACAO EQUAL "D"
+		    EVALUATE WS-TP-CLASSIFICACAO 
+		        WHEN "C"
+                   START ARQ-VENDEDOR KEY NOT GREATER  WS-COD-VEND-ATE
+		        WHEN "R"
+			       START ARQ-VENDEDOR KEY NOT GREATER WS-NOME-ATE
+		        WHEN OTHER
+			       MOVE "TIPO DE CLASSIFICACAO INVALIDO TO WS-MENSAGEM
+				   PERFORM 0152-MONTA-RODAPE
+				   EXIT SECTION
+		    END-EVALUATE
+		ELSE
+			MOVE "TIPO DE ORDENACAO INVALIDO TO WS-MENSAGEM
+	        PERFORM 0152-MONTA-RODAPE
+		    EXIT SECTION		
+    END-IF
+		 
+	PERFORM 0210-PROCESSA-VENDEDOR UNTIL WS-FIM-REL EQUAL "S".
+    PERFORM 0152-MONTA-RODAPE.	
+
+0200-EXIT.
+    EXIT.   
+
+0210-PROCESSA-CLIENTE        SECTION.
+0210-01.
+    
+	IF  WS-TP-ORDENACAO       EQUAL "A"
+	    READ ARQ-VENDEDOR NEXT
+		IF   WS-FILE STATUS   EQUAL ZEROS
+		     IF  ARQV-COD-VENDEDOR   >= WS-COD-CLI-ATE
+              OR ARQV-NM-VENDEDOR	 >= WS-RAZAO-ATE
+			     MOVE "S"            TO WS-FIM-REL
+				 EXIT SECTION
+		     END-IF
+	    END-IF
+	END-IF
+	
+	IF  WS-TP-ORDENACAO       EQUAL "D"
+	    READ ARQ-VENDEDOR PREVIOUS
+		IF   WS-FILE STATUS   EQUAL ZEROS
+		     IF  ARQV-COD-VENDEDOR    <= WS-COD-CLI-ATE
+              OR ARQV-NM-VENDEDOR     <= WS-RAZAO-ATE
+			     MOVE "S"             TO WS-FIM-REL
+				 EXIT SECTION
+		     END-IF
+	    END-IF
+	END-IF
+
+	IF  WS-FILE-STATUS     EQUAL ZEROS		  
+	    MOVE ARQV-CPF-VENDEDOR  TO WRK-CPF-VENDEDOR
+        MOVE ARQV-NM-VENDEDOR   TO WRK-NM-VENDEDOR
+        MOVE ARQV-LAT-VENDEDOR  TO WRK-LAT-VENDEDOR
+        MOVE ARQV-LONG-VENDEDOR TO WKR-LONG-VENDEDOR
+        PERFORM 0153-IMPRIME-LINHA
+    END-IF.		
+
+
+0210-EXIT.
+    EXIT. 
+	
+0300-FINALIZACAO        SECTION.
+0300-01.
+
+    CLOSE ARQ-VENDEDOR.
+    EXIT PROGRAM. 
+
+0300-EXIT.
+    EXIT.		

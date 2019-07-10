@@ -1,0 +1,145 @@
+IDENTIFICATION DIVISION.
+PROGRAM-ID. PRINCIPAL.
+AUTHOR KAUE.
+
+ENVIRONMENT DIVISION.
+
+DATA DIVISION.
+   FILE SECTION.
+     
+   WORKING-STORAGE SECTION.
+   
+    01 WS-OPCAO     PIC 9(02) VALUE ZEROS.
+    01 WS-MENSAGEM  PIC X(80) VALUE SPACES.
+
+   LINKAGE SECTION.
+    01 LNK-STATUS   PIC 9(04).
+	01 LNK-DADOS    PIC X(80).
+	
+PROCEDURE DIVISION.
+   
+    PERFORM 0100-INICIALIZACAO.
+    PERFORM 0150-MONTA-TELA.
+    PERFORM 0200-PROCESSAMENTO UNTIL WS-OPCAO EQUAL 99.
+    PERFORM 0300-FINALIZACAO.
+
+0100-INICIALIZACAO      SECTION.
+0100-01.
+
+    MOVE SPACES TO WS-OPCAO.
+    MOVE SPACES TO WS-MENSAGEM.
+    MOVE SPACES TO LNK-DADOS.
+	MOVE ZEROS  TO LNK-STATUS.
+
+0100-EXIT.
+    EXIT.
+   
+0150-MONTA-TELA         SECTION.
+0150-01.
+
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                 DIGITE A OPCAO DESEJADA                              |/n".
+	DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                                                                      |/n".
+    DISPLAY "|   Cadastros                                                          |/n".
+    DISPLAY "|   01 - Cadastro de Cliente                                           |/n".
+    DISPLAY "|   02 - Cadastro de Vendedor                                          |/n".
+	DISPLAY "|                                                                      |/n".
+    DISPLAY "|   Relatórios                                                         |/n".
+    DISPLAY "|   03 - Relatório de Clientes                                         |/n".
+	DISPLAY "|   04 - Relatório de Vendedores                                       |/n".
+	DISPLAY "|                                                                      |/n".
+    DISPLAY "|   Executar                                                           |/n".
+    DISPLAY "|   05 - Executar Distribuição de Clientes                             |/n".
+	DISPLAY "|                                                                      |/n".
+    DISPLAY "|   99 - Sair                                                          |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|  ".
+    ACCEPT  WS-OPCAO.
+    DISPLAY " OPCAO                                                          	|/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|  ", WS-MENSAGEM, " |/n".
+	DISPLAY "------------------------------------------------------------------------/n".	
+
+0150-EXIT.
+    EXIT.
+
+0200-PROCESSAMENTO      SECTION.
+0200-01.
+    
+	MOVE SPACES          TO WS-MENSAGEM.
+	
+	EVALUATE WS-OPCAO
+	    WHEN 01
+	       PERFORM 0210-CAD-CLIENTE
+		WHEN 02
+           PERFORM 0220-CAD-VENDEDOR
+        WHEN 03
+           PERFORM 0230-REL-CLIENTE
+        WHEN 04
+           PERFORM 0240-REL-VENDEDOR
+        WHEN 05
+           PERFORM 0250-EXEC-DISTRIB
+        WHEN 99
+           EXIT SECTION
+        WHEN OTHER
+           MOVE "POR FAVOR INFORME UMA OPCAO VALIDA!" TO WS-MENSAGEM
+           PERFORM 0150-MONTA-TELA
+    END-EVALUATE.		   
+
+0200-EXIT.
+    EXIT.   
+
+0210-CAD-CLIENTE        SECTION.
+0210-01.
+
+    CALL "CAD_CLIENTE" USING LNK-STATUS
+	                         LNK-DADOS. 
+
+0210-EXIT.
+    EXIT. 
+
+0220-CAD-VENDEDOR       SECTION.
+0220-01.
+
+    CALL "CAD_VENDEDOR" USING LNK-STATUS
+	                           LNK-DADOS. 
+
+0220-EXIT.
+    EXIT. 
+
+0230-REL-CLIENTE       SECTION.
+0230-01.
+
+    CALL "REL_CLIENTE" USING LNK-STATUS
+	                         LNK-DADOS. 
+
+0230-EXIT.
+    EXIT. 
+
+0240-REL-VENDEDOR       SECTION.
+0240-01.
+
+    CALL "REL_VENDEDOR" USING LNK-STATUS
+	                          LNK-DADOS. 
+
+0240-EXIT.
+    EXIT. 
+
+0250-EXEC-DISTRIB       SECTION.
+0240-01.
+
+    CALL "EXEC_DISTRIB" USING LNK-STATUS
+	                          LNK-DADOS. 
+
+0250-EXIT.
+    EXIT. 
+	
+0300-FINALIZACAO        SECTION.
+0300-01.
+
+    STOP RUN.
+
+0300-EXIT.
+    EXIT.		

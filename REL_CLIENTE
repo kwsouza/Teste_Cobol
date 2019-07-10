@@ -1,0 +1,372 @@
+IDENTIFICATION DIVISION.
+PROGRAM-ID. REL_CLIENTE.
+AUTHOR KAUE.
+
+ENVIRONMENT DIVISION.
+INPUT-OUTPUT SECTION.
+FILE-CONTROL.
+
+    SELECT ARQ-CLIENTE ASSIGN TO DISK WID-ARQ-CLIENTE
+		ORGANIZATION MODE    IS INDEXED
+		ACCESS MODE          IS DYNAMIC
+		RECORD KEY           IS ARQC-COD-CLIENTE
+		LOCK MODE            IS MANUAL
+		FILE STATUIS         IS WS-RESULTADO-ACESSO
+		
+    SELECT ARQ-VEND-CLI ASSIGN TO DISK WID-ARQ-VEND-CLI
+		ORGANIZATION MODE    IS INDEXED
+		ACCESS MODE          IS DYNAMIC
+		RECORD KEY           IS ARQVC-COD-VENDEDOR
+		LOCK MODE            IS MANUAL
+		FILE STATUIS         IS WS-RESULTADO-ACESSO			
+			 
+DATA DIVISION.
+   FILE SECTION.
+   
+   FD ARQ-CLIENTE.
+    01 ARQC-REGISTRO.
+       03 ARQC-COD-CLIENTE    PIC 9(07) VALUE ZEROS.
+	   03 ARQC-CNPJ-CLIENTE   PIC 9(14) VALUE ZEROS.
+	   03 ARQC-RAZAO-SOCIAL   PIC X(40) VALUE SPACES.
+	   03 ARQC-LAT-CLIENTE    PIC S9(03)V9(08).
+	   03 ARQC-LONG-CLIENTE   PIC S9(03)V9(08).
+	   
+   FD ARQ-VEND-CLI.
+    01 ARQVC-REGISTRO.
+       03 ARQVC-COD-VENDEDOR  PIC 9(07) VALUE ZEROS.	
+	   03 ARQVC-COD-CLIENTE   PIC 9(07) VALUE ZEROS.
+	   03 ARQVC-LATITUDE      PIC S9(03)V9(08).
+	   03 ARQVC-LONGITUDE     PIC S9(03)V9(08).		   
+			 
+   WORKING-STORAGE SECTION.
+   
+    01 WS-OPCAO            PIC 9(02) VALUE ZEROS.
+	01 WS-FIM-REL          PIC X(01) VALUE SPACES.
+    01 WS-MENSAGEM         PIC X(80) VALUE SPACES.
+	01 WS-RESULTADO-ACESSO PIC 9(04) VALUE ZEROS.
+	01 WS-COD-VENDEDOR     PIC 9(07) VALUE ZEROS.
+	01 WS-COD-CLI-DE       PIC 9(07) VALUE ZEROS.
+	01 WS-COD-CLI-ATE      PIC 9(07) VALUE ZEROS.
+	01 WS-RAZAO-DE         PIC X(40) VALUE SPACES.
+	01 WS-RAZAO-ATE        PIC X(40) VALUE SPACES.
+	01 WS-TP-CLASSIFICACAO PIC X(01) VALUE SPACES.
+	01 WS-TP-ORDENACAO     PIC X(01) VALUE SPACES.
+	
+	01 WRK-CLIENTE.
+       03 WRK-COD-CLIENTE    PIC 9(07) VALUE ZEROS.
+	   03 WRK-CNPJ-CLIENTE   PIC 9(14) VALUE ZEROS.
+	   03 WRK-RAZAO-SOCIAL   PIC X(40) VALUE SPACES.
+	   03 WRK-LAT-CLIENTE    PIC S9(03)V9(08).
+	   03 WRK-LONG-CLIENTE   PIC S9(03)V9(08).
+
+   LINKAGE SECTION.
+    01 LNK-STATUS   PIC 9(04).
+	01 LNK-DADOS    PIC X(80).
+	
+PROCEDURE DIVISION.
+   
+    PERFORM 0100-INICIALIZACAO.
+    PERFORM 0150-MONTA-TELA
+    PERFORM 0200-PROCESSAMENTO
+    PERFORM 0300-FINALIZACAO.
+
+0100-INICIALIZACAO      SECTION.
+0100-01.
+
+    MOVE SPACES      TO WS-OPCAO.
+    MOVE SPACES      TO WS-MENSAGEM.
+    MOVE SPACES      TO LNK-DADOS.
+	MOVE ZEROS       TO LNK-STATUS.
+	MOVE SPACES      TO WS-TP-ORDENACAO
+	MOVE SPACES      TO WS-TP-CLASSIFICACAO
+	MOVE ZEROS       TO WS-COD-VENDEDOR
+	MOVE LOW-VALUES  TO WS-COD-CLI-DE
+	MOVE LOW-VALUES  TO WS-RAZAO-DE
+	MOVE HIGH-VALUES TO WS-COD-CLI-ATE
+	MOVE HIGH-VALUES TO WS-RAZAO-ATE
+	
+	OPEN I-O ARQ-CLIENTE.
+	IF WS-FILE-STATUS NOT EQUAL ZEROS
+	   MOVE "ERRO AO ABRIR ARQUIVO DE CLIENTES" TO WS-MENSAGEM
+	   EXIT SECTION
+	END-IF.
+	
+	OPEN I-O ARQ-VEND-CLI.
+	IF WS-FILE-STATUS NOT EQUAL ZEROS
+	   MOVE "ERRO AO ABRIR ARQUIVO DE CARTEIRA DE CLIENTES" TO WS-MENSAGEM
+	   EXIT SECTION
+	END-IF.	
+
+0100-EXIT.
+    EXIT.
+
+0150-EXIT.
+    EXIT.
+
+0150-MONTA-TELA         SECTION.
+0150-01.
+
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                   RELATORIO DE CLIENTES                              |/n".
+	DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|   TIPO DE ORDENACAO                                                  |/n".
+	DISPLAY "|   DIGITE A PARA ASCENDENTE OU D PARA DESCENDENTE: ".
+	ACCEPT  WS-TP-ORDENACAO.
+	DISPLAY "    |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|   TIPO DE CLASSIFICACAO                                              |/n".
+	DISPLAY "|   DIGITE C PARA CODIGO DO CLIENTE OU R PARA RAZAO SOCIAL: ".
+	ACCEPT  WS-TP-CLASSIFICACAO.
+	DISPLAY "   |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|   FILTROS                                                            |/n".
+    DISPLAY "|   CODIGO VENDEDOR: ". 
+	ACCEPT  WS-COD-VENDEDOR.
+    DISPLAY	"                    |/n".
+	DISPLAY "|   CODIGO CLIENTE DE ".
+	ACCEPT  WS-COD-CLI-DE.
+	DISPLAY " ATE ".
+	ACCEPT  WS-COD-CLI-ATE
+	DISPLAY " |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|   RAZAO SOCIAL DE ".
+	ACCEPT  WS-RAZAO-DE.
+	DISPLAY " ATE ".
+	ACCEPT  WS-RAZAO-ATE.
+	DISPLAY " |/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "|   DIGITE 99 PARA VOLTAR                                              |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|  ".
+    ACCEPT  WS-OPCAO.
+    DISPLAY " OPCAO                                                          	|/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|  ", WS-MENSAGEM, " |/n".
+	DISPLAY "------------------------------------------------------------------------/n".	
+
+0150-EXIT.
+    EXIT.
+
+0151-MONTA-CABECALHO         SECTION.
+0151-01.
+
+    DISPLAY "-----------------------------------------------------------------------------/n".
+	DISPLAY "|                   RELATORIO DE CLIENTES                                   |/n".
+	DISPLAY "-----------------------------------------------------------------------------/n".
+	DISPLAY "| COD-CLIENTE | CNPJ-CLIENTE | RAZAO SOCIAL          | LATITUDE | LONGITUDE |/n".
+	DISPLAY "-----------------------------------------------------------------------------/n".
+	DISPLAY "|                                                                           |/n".	
+	
+0151-EXIT.
+    EXIT.
+
+0152-MONTA-CABECALHO-2         SECTION.
+0152-01.
+
+    DISPLAY "--------------------------------------------------------------------------------------------/n".
+	DISPLAY "|                   RELATORIO DE CLIENTES                                                  |/n".
+	DISPLAY "--------------------------------------------------------------------------------------------/n".
+	DISPLAY "| COD-VENDEDOR | COD-CLIENTE | CNPJ-CLIENTE | RAZAO SOCIAL          | LATITUDE | LONGITUDE |/n".
+	DISPLAY "--------------------------------------------------------------------------------------------/n".
+	DISPLAY "|                                                                                          |/n".	
+	
+0152-EXIT.
+    EXIT.
+
+0153-MONTA-RODAPE         SECTION.
+0153-01.
+
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|  ", WS-MENSAGEM, " |/n".
+	DISPLAY "------------------------------------------------------------------------/n".
+
+0153-EXIT.
+    EXIT.
+
+0154-IMPRIME-LINHA            SECTION.
+0154-01.
+
+	DISPLAY "| ", WRK-COD-CLIENTE, " | ", WRK-CNPJ-CLIENTE, " | ", WRK-RAZAO-SOCIAL, " | ", WRK-LAT-CLIENTE, " | ", WRK-LONG-CLIENTE, " |/n".
+
+0154-EXIT.
+    EXIT.
+	
+0154-IMPRIME-LINHA-VEND        SECTION.
+0154-01.
+
+	DISPLAY "| ", WS-COD-VENDEDOR, " | ", WRK-COD-CLIENTE, " | ", WRK-CNPJ-CLIENTE, " | ", WRK-RAZAO-SOCIAL, " | ", WRK-LAT-CLIENTE, " | ", WRK-LONG-CLIENTE, " |/n".
+
+0154-EXIT.
+    EXIT.
+	
+0200-PROCESSAMENTO      SECTION.
+0200-01.
+    
+	IF  WS-COD-VENDEDOR      NOT EQUAL ZEROS
+        PEFFORM 0220-PROCESSA-VENDEDOR
+		EXIT SECTION
+	END-IF.	
+	
+	MOVE SPACES          TO WS-MENSAGEM.
+    IF   WS-TP-ORDENACAO EQUAL "A"
+         EVALUATE WS-TP-CLASSIFICACAO 
+		    WHEN "C"
+                 START ARQ-CLIENTE KEY NOT LESS WS-COD-CLI-DE
+		    WHEN "R"
+			     START ARQ-CLIENTE KEY NOT LESS WS-RAZAO-DE
+		    WHEN OTHER
+			     MOVE "TIPO DE CLASSIFICACAO INVALIDO TO WS-MENSAGEM
+				 PERFORM 0153-MONTA-RODAPE
+				 EXIT SECTION
+		END-EVALUATE
+	ELSE
+	    IF  WS-TP-ORDENACAO EQUAL "D"
+		    EVALUATE WS-TP-CLASSIFICACAO 
+		        WHEN "C"
+                   START ARQ-CLIENTE KEY NOT GREATER  WS-COD-CLI-ATE
+		        WHEN "R"
+			       START ARQ-CLIENTE KEY NOT GREATER WS-RAZAO-ATE
+		        WHEN OTHER
+			       MOVE "TIPO DE CLASSIFICACAO INVALIDO TO WS-MENSAGEM
+				   PERFORM 0153-MONTA-RODAPE
+				   EXIT SECTION
+		    END-EVALUATE
+		ELSE
+			MOVE "TIPO DE ORDENACAO INVALIDO TO WS-MENSAGEM
+	        PERFORM 0153-MONTA-RODAPE
+		    EXIT SECTION		
+    END-IF
+		 
+	PERFORM 0210-PROCESSA-CLIENTE UNTIL WS-FIM-REL EQUAL "S".
+    PERFORM 0153-MONTA-RODAPE.	
+
+0200-EXIT.
+    EXIT.   
+
+0210-PROCESSA-CLIENTE        SECTION.
+0210-01.
+    
+	IF  WS-TP-ORDENACAO       EQUAL "A"
+	    READ ARQ-CLIENTE NEXT
+		IF   WS-FILE STATUS   EQUAL ZEROS
+		     IF  ARQC-COD-CLIENTE    >= WS-COD-CLI-ATE
+              OR ARQC-RAZAO-SOCIAL	>= WS-RAZAO-ATE
+			     MOVE "S"           TO WS-FIM-REL
+				 EXIT SECTION
+		     END-IF
+	    END-IF
+	END-IF
+	
+	IF  WS-TP-ORDENACAO       EQUAL "D"
+	    READ ARQ-CLIENTE PREVIOUS
+		IF   WS-FILE STATUS   EQUAL ZEROS
+		     IF  ARC-COD-CLIENTE    <= WS-COD-CLI-ATE
+              OR ARQC-RAZAO-SOCIAL	<= WS-RAZAO-ATE
+			     MOVE "S"           TO WS-FIM-REL
+				 EXIT SECTION
+		     END-IF
+	    END-IF
+	END-IF
+
+	IF  WS-FILE-STATUS     EQUAL ZEROS		  
+	    MOVE ARQC-CNPJ-CLIENTE TO WRK-CNPJ-CLIENTE
+        MOVE ARQC-RAZAO-SOCIAL TO WRK-RAZAO-SOCIAL
+        MOVE ARQC-LAT-CLIENTE  TO WRK-LAT-CLIENTE
+        MOVE ARQC-LONG-CLIENTE TO WKR-LONG-CLIENTE
+        PERFORM 0154-IMPRIME-LINHA
+    END-IF.		
+
+
+0210-EXIT.
+    EXIT. 
+
+0220-PROCESSA-VENDEDOR  SECTION.
+0220-1.
+	
+	IF  WS-TP-ORDENACAO EQUAL "A"
+        EVALUATE WS-TP-CLASSIFICACAO 
+		    WHEN "C"
+                 START ARQ-VEND-CLI KEY NOT LESS WS-COD-CLI-DE
+		    WHEN "R"
+			     START ARQ-VEND-CLI KEY NOT LESS WS-RAZAO-DE
+		    WHEN OTHER
+			     MOVE "TIPO DE CLASSIFICACAO INVALIDO" TO WS-MENSAGEM
+				 PERFORM 0153-MONTA-RODAPE
+				 EXIT SECTION
+		END-EVALUATE
+	ELSE
+	    IF  WS-TP-ORDENACAO EQUAL "D"
+		    EVALUATE WS-TP-CLASSIFICACAO 
+		        WHEN "C"
+                   START ARQ-VEND-CLI KEY NOT GREATER  WS-COD-CLI-ATE
+		        WHEN "R"
+			       START ARQ-VEND-CLI KEY NOT GREATER WS-RAZAO-ATE
+		        WHEN OTHER
+			       MOVE "TIPO DE CLASSIFICACAO INVALIDO" TO WS-MENSAGEM
+				   PERFORM 0153-MONTA-RODAPE
+				   EXIT SECTION
+		    END-EVALUATE
+		ELSE
+			MOVE "TIPO DE ORDENACAO INVALIDO TO WS-MENSAGEM
+	        PERFORM 0153-MONTA-RODAPE
+		    EXIT SECTION		
+    END-IF
+
+    PERFORM 0221-GERA-RELATORIO UNTIL WS-FIM-REL EQUAL "S"
+	PERFORM 0153-MONTA-RODAPE.	
+	
+0220-EXIT.
+    EXIT.
+
+0221-GERA-RELATORIO     SECTION.
+0221-1.
+
+	IF  WS-TP-ORDENACAO       EQUAL "A"
+	    READ ARQ-VEND-CLI NEXT
+		IF   WS-FILE STATUS   EQUAL ZEROS
+		     IF  ARQVC-COD-CLIENTE  >= WS-COD-CLI-ATE
+              OR ARQVC-RAZAO-SOCIAL	>= WS-RAZAO-ATE
+			     MOVE "S"           TO WS-FIM-REL
+				 EXIT SECTION
+		     END-IF
+	    END-IF
+	END-IF
+	
+	IF  WS-TP-ORDENACAO       EQUAL "D"
+	    READ ARQ-VEND-CLI PREVIOUS
+		IF   WS-FILE STATUS   EQUAL ZEROS
+		     IF  ARVC-COD-CLIENTE   <= WS-COD-CLI-ATE
+              OR ARQVC-RAZAO-SOCIAL	<= WS-RAZAO-ATE
+			     MOVE "S"           TO WS-FIM-REL
+				 EXIT SECTION
+		     END-IF
+	    END-IF
+	END-IF
+	
+    MOVE  ARQVC-COD-CLIENTE        TO WRK-COD-CLIENTE
+	START ARQ-CLIENTE    KEY EQUAL WRK-COD-CLIENTE
+	
+	READ  ARQ-CLIENTE
+	IF    WS-FILE-STATUS EQUAL ZEROS
+	      MOVE ARQC-CNPJ-CLIENTE TO WRK-CNPJ-CLIENTE
+          MOVE ARQC-RAZAO-SOCIAL TO WRK-RAZAO-SOCIAL
+          MOVE ARQC-LAT-CLIENTE  TO WRK-LAT-CLIENTE
+          MOVE ARQC-LONG-CLIENTE TO WKR-LONG-CLIENTE
+          PERFORM 0154-IMPRIME-LINHA-VEND
+    END-IF.
+	
+0221-EXIT.
+    EXIT.
+	
+0300-FINALIZACAO        SECTION.
+0300-01.
+
+    CLOSE ARQ-CLIENTE.
+	CLOSE ARQ-VEND-CLI.
+    EXIT PROGRAM.
+
+0300-EXIT.
+    EXIT.		

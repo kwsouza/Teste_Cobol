@@ -1,0 +1,192 @@
+IDENTIFICATION DIVISION.
+PROGRAM-ID. EXCLUI_CLIENTE.
+AUTHOR KAUE.
+
+ENVIRONMENT DIVISION.
+INPUT-OUTPUT SECTION.
+FILE-CONTROL.
+
+    SELECT ARQ-CLIENTE ASSIGN TO DISK WID-ARQ-CLIENTE
+		ORGANIZATION MODE    IS INDEXED
+		ACCESS MODE          IS DYNAMIC
+		RECORD KEY           IS ARQC-COD-CLIENTE
+		LOCK MODE            IS MANUAL
+		FILE STATUIS         IS WS-RESULTADO-ACESSO
+			 
+DATA DIVISION.
+   FILE SECTION.
+   
+   FD ARQ-CLIENTE.
+    01 ARQC-REGISTRO.
+       03 ARQC-COD-CLIENTE    PIC 9(07) VALUE ZEROS.
+	   03 ARQC-CNPJ-CLIENTE   PIC 9(14) VALUE ZEROS.
+	   03 ARQC-RAZAO-SOCIAL   PIC X(40) VALUE SPACES.
+	   03 ARQC-LAT-CLIENTE    PIC S9(03)V9(08).
+	   03 ARQC-LONG-CLIENTE   PIC S9(03)V9(08).
+			 
+   WORKING-STORAGE SECTION.
+   
+    01 WS-OPCAO            PIC 9(02) VALUE ZEROS.
+	01 WS-EXCLUI           PIC X(01) VALUE SPACES.
+    01 WS-MENSAGEM         PIC X(80) VALUE SPACES.
+	01 WS-RESULTADO-ACESSO PIC 9(04) VALUE ZEROS.
+	
+	01 WRK-CLIENTE.
+       03 WRK-COD-CLIENTE    PIC 9(07) VALUE ZEROS.
+	   03 WRK-CNPJ-CLIENTE   PIC 9(14) VALUE ZEROS.
+	   03 WRK-RAZAO-SOCIAL   PIC X(40) VALUE SPACES.
+	   03 WRK-LAT-CLIENTE    PIC S9(03)V9(08).
+	   03 WRK-LONG-CLIENTE   PIC S9(03)V9(08).
+
+   LINKAGE SECTION.
+    01 LNK-STATUS   PIC 9(04).
+	01 LNK-DADOS    PIC X(80).
+	
+PROCEDURE DIVISION.
+   
+    PERFORM 0100-INICIALIZACAO.
+    PERFORM 0150-MONTA-TELA
+    PERFORM 0200-PROCESSAMENTO UNTIL WS-OPCAO EQUAL 99.
+    PERFORM 0300-FINALIZACAO.
+
+0100-INICIALIZACAO      SECTION.
+0100-01.
+
+    MOVE SPACES TO WS-OPCAO.
+    MOVE SPACES TO WS-MENSAGEM.
+    MOVE SPACES TO LNK-DADOS.
+	MOVE ZEROS  TO LNK-STATUS.
+	
+	OPEN I-O ARQ-CLIENTE.
+	IF WS-FILE-STATUS NOT EQUAL ZEROS
+	   MOVE "ERRO AO ABRIR ARQUIVO DE CLIENTES" TO WS-MENSAGEM
+	   EXIT SECTION
+	END-IF.
+	
+	PERFORM 0150-MONTA-TELA-1
+	PERFORM UNTIL    WS-FILE-STATUS EQUAL ZEROS
+	           OR    WS-OPCAO       EQUAL 99	    
+	    PERFORM 0160-VALIDA-CODIGO
+		IF WS-FILE-STATUS NOT EQUAL ZEROS
+		   MOVE "CODIGO DO CLIENTE NAO ENCONTRADO" TO WS-MENSAGEM
+		   PERFORM 0150-MONTA-TELA-1
+		END-IF   
+	END-PERFORM	
+
+0100-EXIT.
+    EXIT.
+	
+0150-MONTA-TELA         SECTION.
+0150-01.
+
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                   EXCLUSAO DE CLIENTES                               |/n".
+	DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                                                                      |/n".
+    DISPLAY "|   CODIGO CLIENTE: ", WRK-COD-CLIENTE , "                    |/n".
+    DISPLAY "|   CNPJ: ", WRK-CNPJ-CLIENTE, "                              |/n".
+	DISPLAY "|   RAZAO SOCIAL: ", WRK-RAZAO-SOCIAL,   "                    |/n".
+    DISPLAY "|   LATITUDE: ", WRK-LAT-CLIENTE, "               	           |/n".	
+    DISPLAY "|   LONGITUDE: ", WRK-LONG-CLIENTE, "               	       |/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "|   CONFIRMAR EXCLUSAO S/N.                                            |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|  ".
+    ACCEPT  WS-EXCLUI.
+    DISPLAY " OPCAO                                                          	|/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "|   DIGITE 99 PARA VOLTAR                                              |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|  ".
+    ACCEPT  WS-OPCAO.
+    DISPLAY " OPCAO                                                          	|/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|  ", WS-MENSAGEM, " |/n".
+	DISPLAY "------------------------------------------------------------------------/n".	
+
+0150-EXIT.
+    EXIT.
+
+0150-MONTA-TELA-1         SECTION.
+0150-01.
+
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                   EXCLUSAO DE CLIENTES                               |/n".
+	DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                                                                      |/n".
+    DISPLAY "|   CODIGO CLIENTE: ". 
+	ACCEPT  WRK-COD-CLIENTE.
+    DISPLAY	"                    |/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "|   DIGITE 99 PARA VOLTAR                                              |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|  ".
+    ACCEPT  WS-OPCAO.
+    DISPLAY " OPCAO                                                          	|/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|  ", WS-MENSAGEM, " |/n".
+	DISPLAY "------------------------------------------------------------------------/n".	
+
+0150-01-EXIT.
+    EXIT.
+
+0160-VALIDA-CODIGO      SECTION.
+0160-1.
+
+    START ARQ-CLIENTE KEY EQUAL WRK-COD-CLIENTE
+	IF WS-FILE-STATUS NOT EQUAL ZEROS
+	   KOVE "CLIENTE NAO ENCONTRADO" TO WS-MENSAGEM
+	   EXIT SECTION
+	END-IF.
+	
+	READ ARQ-CLIENTE
+	IF WS-FILE-STATUS EQUAL ZEROS
+	   MOVE ARQC-CNPJ-CLIENTE TO WRK-CNPJ-CLIENTE
+	   MOVE ARQC-RAZAO-SOCIAL TO WRK-RAZAO-SOCIAL
+	   MOVE ARQC-LAT-CLIENTE  TO WRK-LAT-CLIENTE
+	   MOVE ARQC-LONG-CLIENTE TO WRK-LONG-CLIENTE
+	END-IF.   
+
+0160-EXIT.
+   EXIT.
+   
+0200-PROCESSAMENTO      SECTION.
+0200-01.
+    
+	MOVE SPACES          TO WS-MENSAGEM.
+	PERFORM 0210-PROCESSA-CLIENTE	   
+
+0200-EXIT.
+    EXIT.   
+
+0210-PROCESSA-CLIENTE        SECTION.
+0210-01.
+
+	IF  WS-EXCLUI   EQUAL "S"
+	    PERFORM 0211-EXCLUI-CLIENTE
+	END-IF.	
+
+0210-EXIT.
+    EXIT. 
+
+0211-EXCLUI-CLIENTE      SECTION.
+0211-1.
+
+	DELETE ARQC-REGISTRO.
+	IF  WS-FILE-STATUS NOT EQUAL   ZEROS
+	    MOVE "ERRO AO EXCLUIR CLIENTE" TO WS-MENSAGEM
+    END-IF.
+
+0211-EXIT.
+    EXIT.
+	
+0300-FINALIZACAO        SECTION.
+0300-01.
+
+    CLOSE ARQ-CLIENTE.
+    EXIT PROGRAM.
+
+0300-EXIT.
+    EXIT.		

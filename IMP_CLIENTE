@@ -1,0 +1,240 @@
+IDENTIFICATION DIVISION.
+PROGRAM-ID. IMP_CLIENTE.
+AUTHOR KAUE.
+
+ENVIRONMENT DIVISION.
+INPUT-OUTPUT SECTION.
+FILE-CONTROL.
+
+     SELECT IMP-CLIENTE ASSIGN TO WID-ENDERECO
+         ORGANIZATION MODE   IS LINE SEQUENTIAL
+         ACCESS MODE         IS SEQUENTIAL
+         FILE STATUS         IS WS-RESULTADO-ACESSO.
+
+    SELECT ARQ-CLIENTE ASSIGN TO DISK WID-ARQ-CLIENTE
+		ORGANIZATION MODE    IS INDEXED
+		ACCESS MODE          IS DYNAMIC
+		RECORD KEY           IS ARQC-COD-CLIENTE
+		LOCK MODE            IS MANUAL
+		FILE STATUS          IS WS-RESULTADO-ACESSO
+			 
+DATA DIVISION.
+   FILE SECTION.
+   
+   FD  IMP-CLIENTE.
+    01 IMP-REGISTRO.
+       03 IMP-COD-CLIENTE     PIC X(07) VALUE SPACES.
+	   03 FILLER              PIC X(01) VALUE SPACES.
+	   03 IMP-CNPJ-CLIENTE    PIC X(14) VALUE SPACES.
+	   03 FILLER              PIC X(01) VALUE SPACES.
+	   03 IMP-RAZAO-SOCIAL    PIC X(40) VALUE SPACES.
+	   03 FILLER              PIC X(01) VALUE SPACES.
+	   03 IMP-LAT-CLIENTE     PIC X(14) VALUE SPACES.
+	   03 FILLER              PIC X(01) VALUE SPACES.
+	   03 IMP-LONG-CLIENTE    PIC X(14) VALUE SPACES.
+	   03 FILLER              PIC X(01) VALUE SPACES.
+	   
+   FD  ARQ-CLIENTE.  
+    01 ARQC-REGISTRO.
+       03 ARQC-COD-CLIENTE    PIC 9(07) VALUE ZEROS.
+	   03 ARQC-CNPJ-CLIENTE   PIC 9(14) VALUE ZEROS.
+	   03 ARQC-RAZAO-SOCIAL   PIC X(40) VALUE SPACES.
+	   03 ARQC-LAT-CLIENTE    PIC S9(03)V9(08).
+	   03 ARQC-LONG-CLIENTE   PIC S9(03)V9(08).
+			 
+   WORKING-STORAGE SECTION.
+   
+    01 WS-OPCAO            PIC 9(02) VALUE ZEROS.
+    01 WS-MENSAGEM         PIC X(80) VALUE SPACES.
+	01 WS-RESULTADO-ACESSO PIC 9(04) VALUE ZEROS.
+	01 WS-ENDERECO         PIC X(80) VALUE SPACES.
+	01 WS-SOMA             PIC 9(04) VALUE ZEROS.
+	01 WS-RESTO            PIC 9(04) VALUE ZEROS.
+	01 WS-QUOCIENTE        PIC 9(04) VALUE ZEROS.
+	01 WS-CONTADOR         PIC 9(04) VALUE ZEROS.
+	01 WS-CNPJ-OK          PIC X(01) VALUE SPACES.
+	
+	01 WRK-CLIENTE.
+       03 WRK-COD-CLIENTE    PIC 9(07) VALUE ZEROS.
+	   03 WRK-CNPJ-CLIENTE   PIC 9(14) VALUE ZEROS.
+	   03 WRK-RAZAO-SOCIAL   PIC X(40) VALUE SPACES.
+	   03 WRK-LAT-CLIENTE    PIC S9(03)V9(08).
+	   03 WRK-LONG-CLIENTE   PIC S9(03)V9(08).
+
+   LINKAGE SECTION.
+    01 LNK-STATUS   PIC 9(04).
+	01 LNK-DADOS    PIC X(80).
+	
+PROCEDURE DIVISION.
+   
+    PERFORM 0100-INICIALIZACAO.
+    PERFORM 0150-MONTA-TELA
+    PERFORM 0200-PROCESSAMENTO UNTIL WS-OPCAO EQUAL 99.
+    PERFORM 0300-FINALIZACAO.
+
+0100-INICIALIZACAO      SECTION.
+0100-01.
+
+    MOVE SPACES TO WS-OPCAO.
+    MOVE SPACES TO WS-MENSAGEM.
+    MOVE SPACES TO LNK-DADOS.
+	MOVE ZEROS  TO LNK-STATUS.
+	
+	OPEN I-O ARQ-CLIENTE.
+	IF WS-FILE-STATUS NOT EQUAL ZEROS
+	   MOVE "ERRO AO ABRIR ARQUIVO DE CLIENTES" TO WS-MENSAGEM
+	   EXIT SECTION
+	END-IF.
+	
+	MOVE WS-ENDERECO TO WID-ENDERECO
+	
+	OPEN IMP-CLIENTE INPUT.
+	IF WS-FILE-STATUS NOT EQUAL ZEROS
+	   MOVE "ERRO AO ABRIR ARQUIVO DE IMPORTACAO" TO WS-MENSAGEM
+	   EXIT SECTION 
+	END-IF.
+	
+0100-EXIT.
+    EXIT.
+
+0150-MONTA-TELA         SECTION.
+0150-01.
+
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                   IMPORTACAO DE CLIENTES                             |/n".
+	DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                                                                      |/n".
+    DISPLAY "|   DIGITE O ENDERECO E O NOME DO ARQUIVO A SER IMPORTADO.             |/n ".
+    DISPLAY "| ".	
+	ACCEPT  WS=ENDERECO.
+	DISPLAY " |/n".
+    DISPLAY	"|                                                                      |/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "|   DIGITE 99 PARA VOLTAR                                              |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|  ".
+    ACCEPT  WS-OPCAO.
+    DISPLAY " OPCAO                                                          	|/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|  ", WS-MENSAGEM, " |/n".
+	DISPLAY "------------------------------------------------------------------------/n".	
+
+0150-01-EXIT.
+    EXIT.
+   
+0200-PROCESSAMENTO      SECTION.
+0200-01.
+    
+	MOVE SPACES          TO WS-MENSAGEM.
+	PERFORM 0210-PROCESSA-CLIENTE UNTIL WS-FILE-STATUS NOT EQUAL ZEROS	   
+
+0200-EXIT.
+    EXIT.   
+
+0210-PROCESSA-CLIENTE        SECTION.
+0210-01.
+    
+	READ IMP-CLIENTE NEXT.
+	IF WS-FILE-STATUS EQUAL ZEROS
+	   MOVE FUNCTION NUMVAL(IMP-COD-CLIENTE)  TO WRK-COD-CLIENTE
+	   MOVE IMP-CNPJ-CLIENTE                  TO WRK-CNPJ-CLIENTE
+	   MOVE IMP-RAZAO-SOCIAL                  TO WRK-RAZAO-SOCIAL
+	   MOVE FUNCTION NUMVAL(IMP-LAT-CLIENTE)  TO WRK-LAT-CLIENTE
+	   MOVE FUNCTION NUMVAL(IMP-LONG-CLIENTE) TO WRK-LONG-CLIENTE
+	   PERFORM 0211-GRAVA-CLIENTE
+	END-IF.
+
+0210-EXIT.
+    EXIT. 
+
+0211-GRAVA-CLIENTE      SECTION.
+0211-1.
+    
+	INITIALIZE ARQC-REGISTRO.
+	MOVE WRK-COD-CLIENTE                     TO ARQC-COD-CLIENTE
+	PERFORM 0212-VALIDA-CNPJ
+	IF   WS-CNPJ-OK                          NOT EQUAL "S"
+	     MOVE "CNPJ INVALIDO"                TO WS-MENSAGEM
+		 EXIT SECTION
+	END-IF	 
+	MOVE WRK-CNPJ-CLIENTE                    TO ARQC-CNPJ-CLIENTE
+	MOVE WRK-RAZAO-SOCIAL                    TO ARQC-RAZAO-SOCIAL
+	MOVE WRK-LAT-CLIENTE                     TO ARQC-LAT-CLIENTE
+	MOVE WRK-LONG-CLIENTE                    TO ARQC-LONG-CLIENTE
+	WRITE ARQC-REGISTRO.
+	IF  WS-FILE-STATUS NOT EQUAL   ZEROS
+	    MOVE "ERRO AO IMPORTAR CLIENTE" TO WS-MENSAGEM
+		EXIT SECTION
+    END-IF.
+
+0211-EXIT.
+    EXIT.
+
+0212-VALIDA-CNPJ      SECTION.
+0212-1.
+
+        MOVE SPACES                TO WS-MENSAGEM
+		EVALUATE WRK-CNPJ-CLIENTE
+            WHEN 00000000000000
+            WHEN 11111111111111
+            WHEN 22222222222222
+            WHEN 33333333333333
+            WHEN 44444444444444
+            WHEN 55555555555555
+            WHEN 66666666666666
+            WHEN 77777777777777
+            WHEN 88888888888888
+            WHEN 99999999999999
+                 MOVE "NUMERO DE CNPJ INVALIDO" TO WS-MENSAGEM
+                 MOVE ZEROS    TO WRK-CNPJ-CLIENTE
+				 EXIT SECTION
+            WHEN OTHER
+                 COMPUTE WS-SOMA = 0
+                 PERFORM UNTIL WS-CONTADOR > 12
+                  COMPUTE WS-SOMA = WS-SOMA + ((14 - WS-CONTADOR) * WS-CONTADOR:1)
+                  COMPUTE WS-CONTADOR = WS-CONTADOR + 1
+                 END-PERFORM
+                 DIVIDE WS-SOMA BY 14 GIVING WS-QUOCIENTE REMAINDER WS-RESTO
+                 IF WS-RESTO < 2
+                    COMPUTE WS-DIG = 0
+                 ELSE
+                    COMPUTE WS-DIG = 14 - WS-RESTO
+                 END-IF
+                 IF WS-DIG NOT EQUAL TO WRK-CNPJ-CLIENTE(13:1)
+                    MOVE "CNPJ INVALIDO" TO WS-MENSAGEM
+                    MOVE ZEROS           RO WRK-CNPJ-CLIENTE
+                    EXIT SECTION
+                 ELSE
+                    COMPUTE WS-CONTADOR = 1
+                    COMPUTE WS-SOMA = 0
+                    PERFORM UNTIL WS-CONTADOR > 13
+                     COMPUTE WS-SOMA = WS-SOMA + ((15 - WS-CONTADOR) * WRK-CNPJ-CLIENTE(WS-CONTADOR:1))
+                     COMPUTE WS-CONTADOR = CONTADOR + 1
+                    END-PERFORM
+                    DIVIDE WS-SOMA BY 14 GIVING WS-QUOCIENTE REMAINDER WS-RESTO
+                    IF WS-RESTO < 2
+                       COMPUTE WS-DIG = 0
+                    ELSE
+                       COMPUTE WS-DIG = 14 - WS-RESTO
+                    END-IF
+                    IF WS-DIG NOT EQUAL TO WRK-CNPJ-CLIENTE(14:1))
+                       MOVE "CNPJ INVALIDO" TO WS-MENSAGEM
+					   MOVE ZEROS           TO WRK-CNPJ-CLIENTE
+                       EXIT SECTION
+                    END-IF
+                 END-IF
+        END-EVALUATE
+
+0212-EXIT.
+   EXIT.
+   
+0300-FINALIZACAO        SECTION.
+0300-01.
+
+    CLOSE ARQ-CLIENTE.
+	CLOSE IMP-CLIENTE.
+    EXIT PROGRAM.
+
+0300-EXIT.
+    EXIT.		

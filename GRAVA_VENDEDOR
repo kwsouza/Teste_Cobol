@@ -1,0 +1,257 @@
+IDENTIFICATION DIVISION.
+PROGRAM-ID. GRAVA_VENDEDOR.
+AUTHOR KAUE.
+
+ENVIRONMENT DIVISION.
+INPUT-OUTPUT SECTION.
+FILE-CONTROL.
+
+    SELECT ARQ-VENDEDOR ASSIGN TO DISK WID-ARQ-VENDEDOR
+		ORGANIZATION MODE    IS INDEXED
+		ACCESS MODE          IS DYNAMIC
+		RECORD KEY           IS ARQV-COD-VENDEDOR
+		LOCK MODE            IS MANUAL
+		FILE STATUIS         IS WS-RESULTADO-ACESSO
+			 
+DATA DIVISION.
+   FILE SECTION.
+   
+   FD ARQ-VENDEDOR.
+    01 ARQV-REGISTRO.
+       03 ARQV-COD-VENDEDOR   PIC 9(07) VALUE ZEROS.
+	   03 ARQV-CPF-VENDEDOR   PIC 9(11) VALUE ZEROS.
+	   03 ARQV-NM-VENDEDOR    PIC X(40) VALUE SPACES.
+	   03 ARQV-LAT-VENDEDOR   PIC S9(03)V9(08).
+	   03 ARQV-LONG-VENDEDOR  PIC S9(03)V9(08).
+			 
+   WORKING-STORAGE SECTION.
+   
+    01 WS-OPCAO            PIC 9(02) VALUE ZEROS.
+    01 WS-MENSAGEM         PIC X(80) VALUE SPACES.
+	01 WS-RESULTADO-ACESSO PIC 9(04) VALUE ZEROS.
+	01 WS-SOMA             PIC 9(04) VALUE ZEROS.
+	01 WS-RESTO            PIC 9(04) VALUE ZEROS.
+	01 WS-QUOCIENTE        PIC 9(04) VALUE ZEROS.
+	01 WS-CONTADOR         PIC 9(04) VALUE ZEROS.
+	01 WS-CPF-OK           PIC X(01) VALUE SPACES.
+	
+	01 WRK-VENDEDOR.
+       03 WRK-COD-VENDEDOR    PIC 9(07) VALUE ZEROS.
+	   03 WRK-CPF-VENDEDOR    PIC 9(11) VALUE ZEROS.
+	   03 WRK-NM-VENDEDOR     PIC X(40) VALUE SPACES.
+	   03 WRK-LAT-VENDEDOR    PIC S9(03)V9(08).
+	   03 WRK-LONG-VENDEDOR   PIC S9(03)V9(08).
+
+   LINKAGE SECTION.
+    01 LNK-STATUS   PIC 9(04).
+	01 LNK-DADOS    PIC X(80).
+	
+PROCEDURE DIVISION.
+   
+    PERFORM 0100-INICIALIZACAO.
+	PERFORM 0140-BUSCA-PROX-COD
+    PERFORM 0150-MONTA-TELA.
+    PERFORM 0200-PROCESSAMENTO UNTIL WS-OPCAO EQUAL 99.
+    PERFORM 0300-FINALIZACAO.
+
+0100-INICIALIZACAO      SECTION.
+0100-01.
+
+    MOVE SPACES TO WS-OPCAO.
+    MOVE SPACES TO WS-MENSAGEM.
+    MOVE SPACES TO LNK-DADOS.
+	MOVE ZEROS  TO LNK-STATUS.
+	
+	OPEN I-O ARQ-VENDEDOR.
+	IF WS-FILE-STATUS NOT EQUAL ZEROS
+	   MOVE "ERRO AO ABRIR ARQUIVO DE VENDEDORES" TO WS-MENSAGEM
+	   EXIT SECTION
+	END-IF.		
+
+0100-EXIT.
+    EXIT.
+
+0140-BUSCA-PROX-COD     SEXTION.
+0140-01.
+
+    READ ARQ-VENDEDOR AT END.
+	MOVE ARQV-COD-VENDEDOR TO WRK-COD-VENDEDOR.
+	IF ARQV-COD-VENDEDOR > ZEROS
+	   ADD 1            TO WRK-COD-VENDEDOR
+	ELSE
+	   MOVE 1           TO WRK-COD-VENDEDOR
+	END-IF.
+
+0140-EXIT.
+    EXIT.
+	
+0150-MONTA-TELA         SECTION.
+0150-01.
+
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                   CADASTRO DE VENDEDORES                             |/n".
+	DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|                                                                      |/n".
+    DISPLAY "|   CODIGO VENDEDOR: ", WRK-COD-VENDEDOR , "                    |/n".
+    DISPLAY "|   CPF: ".
+    ACCEPT  WRK-CPF-VENDEDOR
+    DISPLAY "               	|/n".
+	DISPLAY "|   NOME VENDEDOR: ".
+    ACCEPT  WRK-NM-VENDEDOR
+    DISPLAY "               	|/n".
+    DISPLAY "|   LATITUDE: ".
+    ACCEPT  WRK-LAT-VENDEDOR
+    DISPLAY "               	|/n".	
+    DISPLAY "|   LONGITUDE: ".
+    ACCEPT  WRK-LONG-VENDEDOR
+    DISPLAY "               	|/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "|   DIGITE 99 PARA VOLTAR                                              |/n".
+	DISPLAY "|                                                                      |/n".
+	DISPLAY "|  ".
+    ACCEPT  WS-OPCAO.
+    DISPLAY " OPCAO                                                          	|/n".
+	DISPLAY "|                                                                      |/n".	
+    DISPLAY "------------------------------------------------------------------------/n".
+	DISPLAY "|  ", WS-MENSAGEM, " |/n".
+	DISPLAY "------------------------------------------------------------------------/n".	
+
+0150-EXIT.
+    EXIT.
+
+0200-PROCESSAMENTO      SECTION.
+0200-01.
+    
+	MOVE SPACES          TO WS-MENSAGEM.
+	PERFORM 0210-PROCESSA-VENDEDOR
+	PERFORM 0150-MONTA-TELA.	   
+
+0200-EXIT.
+    EXIT.   
+
+0210-PROCESSA-VENDEDOR        SECTION.
+0210-01.
+    
+	PERFORM 0211-VALIDA-CPF
+	IF  WS-CPF-OK   EQUAL "S"
+	    PERFORM 0212-GRAVA-VENDEDOR
+	END-IF.	 
+
+0210-EXIT.
+    EXIT. 
+
+0211-VALIDA-CPF        SECTION.
+0211-01.
+
+    START ARQ-VENDEDOR KEY NOT LESS ZEROS.
+	PERFORM 0211-1-LER-VENDEDOR UNTIL WS-FILE-STATUS NOT EQUAL ZEROS
+	IF  WS-MENSAGEM     NOT EQUAL SPACES
+	    EXIT SECTION
+	END-IF.
+	
+	PERFORM 0212-2-ROTINA-CPF
+	IF  WS-MENSAGEM     NOT EQUAL SPACES
+	    EXIT SECTION
+    END-IF.
+    
+	MOVE "S"            TO WS-CPF-OK.
+	
+0211-EXIT.
+    EXIT.
+
+0211-1-LER-VENDEDOR      SECTION.
+0211-1.
+
+    READ ARQ-VENDEDOR NEXT
+	IF   WRK-CPF-VENDEDOR          EQUAL ARQV-CPF-VENDEDOR
+	     MOVE 99                   TO WS-FILE-STATUS
+		 MOVE "CPF JA CADASTRADO"  TO WS-MENSAGEM
+		 EXIT SECTION
+	END-IF. 	 
+
+0211-EXIT.
+    EXIT.
+
+0212-2-ROTINA-CPF      SECTION.
+0212-1.
+
+        MOVE SPACES                TO WS-MENSAGEM
+		EVALUATE WRK-CPF-VENDEDOR
+            WHEN 00000000000
+            WHEN 11111111111
+            WHEN 22222222222
+            WHEN 33333333333
+            WHEN 44444444444
+            WHEN 55555555555
+            WHEN 66666666666
+            WHEN 77777777777
+            WHEN 88888888888
+            WHEN 99999999999
+                 MOVE "NUMERO DE CPF INVALIDO" TO WS-MENSAGEM
+                 MOVE ZEROS    TO WRK-CPF-VENDEDOR
+				 EXIT SECTION
+            WHEN OTHER
+                 COMPUTE WS-SOMA = 0
+                 PERFORM UNTIL WS-CONTADOR > 09
+                  COMPUTE WS-SOMA = WS-SOMA + ((11 - WS-CONTADOR) * WS-CONTADOR:1)
+                  COMPUTE WS-CONTADOR = WS-CONTADOR + 1
+                 END-PERFORM
+                 DIVIDE WS-SOMA BY 11 GIVING WS-QUOCIENTE REMAINDER WS-RESTO
+                 IF WS-RESTO < 2
+                    COMPUTE WS-DIG = 0
+                 ELSE
+                    COMPUTE WS-DIG = 11 - WS-RESTO
+                 END-IF
+                 IF WS-DIG NOT EQUAL TO WRK-CPF-VENDEDOR(10:1)
+                    MOVE "CPF INVALIDO" TO WS-MENSAGEM
+                    MOVE ZEROS           RO WRK-CPF-VENDEDOR
+                    EXIT SECTION
+                 ELSE
+                    COMPUTE WS-CONTADOR = 1
+                    COMPUTE WS-SOMA = 0
+                    PERFORM UNTIL WS-CONTADOR > 10
+                     COMPUTE WS-SOMA = WS-SOMA + ((12 - WS-CONTADOR) * WRK-CPF-VENDEDOR(WS-CONTADOR:1))
+                     COMPUTE WS-CONTADOR = CONTADOR + 1
+                    END-PERFORM
+                    DIVIDE WS-SOMA BY 11 GIVING WS-QUOCIENTE REMAINDER WS-RESTO
+                    IF WS-RESTO < 2
+                       COMPUTE WS-DIG = 0
+                    ELSE
+                       COMPUTE WS-DIG = 11 - WS-RESTO
+                    END-IF
+                    IF WS-DIG NOT EQUAL TO WRK-CPF-VENDEDOR(11:1))
+                       MOVE "CPF INVALIDO" TO WS-MENSAGEM
+					   MOVE ZEROS          TO WRK-CPF-VENDEDOR
+                       EXIT SECTION
+                    END-IF
+                 END-IF
+        END-EVALUATE
+
+0212-EXIT.
+   EXIT.
+
+0212-GRAVA-VENDEDOR      SECTION.
+0212-1.
+
+    INITIALIZE WID-ARQ-VENDEDOR
+	MOVE WRK-CPF-VENDEDOR          TO ARQV-CPF-VENDEDOR
+	MOVE WRK-COD-VENDEDOR          TO ARQV-COD-VENDEDOR
+	MOVE WRK-NM-VENDEDOR           TO ARQV-NM-VENDEDOR
+	MOVE WRK-LAT-VENDEDOR          TO ARQV-LAT-VENDEDOR
+	MOVE WRK-LONG-VENDEDOR         TO ARQV-LONG-VENDEDOR
+	WRITE ARQV-REGISTRO.
+	IF  WS-FILE-STATUS NOT EQUAL   ZEROS
+	    MOVE "ERRO AO GRAVAR VENDEDOR" TO WS-MENSAGEM
+    END-IF.
+
+0212-EXIT.
+    EXIT.
+	
+0300-FINALIZACAO        SECTION.
+0300-01.
+
+    CLOSE ARQ-VENDEDOR.
+    EXIT PROGRAM.
+
+0300-EXIT.
+    EXIT.		
